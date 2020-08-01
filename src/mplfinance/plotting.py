@@ -108,7 +108,7 @@ def _valid_plot_kwargs():
  
         'mav'                       : { 'Default'     : None,
                                         'Validator'   : _mav_validator },
-        
+
         'renko_params'              : { 'Default'     : dict(),
                                         'Validator'   : lambda value: isinstance(value,dict) },
 
@@ -337,12 +337,15 @@ def plot( data, **kwargs ):
         for collection in collections:
             axA1.add_collection(collection)
 
+    mav = config['mav']
+    mavwidth = config['_width_config']['line_width']
+    mavcolors = style['mavcolors']
     if ptype in VALID_PMOVE_TYPES:
-        mavprices = _plot_mav(axA1,config,xdates,brick_values)
-    else:
-        mavprices = _plot_mav(axA1,config,xdates,closes)
+        mavprices = _plot_mav(axA1, mav, xdates, brick_values, mavwidth, mavcolors)
+        else:
+        mavprices = _plot_mav(axA1, mav, xdates, closes, mavwidth, mavcolors)
 
-    avg_dist_between_points = (xdates[-1] - xdates[0]) / float(len(xdates))
+avg_dist_between_points = (xdates[-1] - xdates[0]) / float(len(xdates))
     if not config['tight_layout']:
         minx = xdates[0]  - avg_dist_between_points
         maxx = xdates[-1] + avg_dist_between_points
@@ -435,6 +438,9 @@ def plot( data, **kwargs ):
         miny = 0.3 * np.nanmin(volumes)
         maxy = 1.1 * np.nanmax(volumes)
         volumeAxes.set_ylim( miny, maxy )
+        #Didnt know what i was doing. IF should be present or not.
+        if config['volmav'] is not None:
+            mavprices = _plot_mav(axA1, volmav, xdates, volumes, mavwidth, mavcolors)
 
     xrotation = config['xrotation']
     _set_ticks_on_bottom_panel_only(panels,formatter,rotation=xrotation)
@@ -663,7 +669,7 @@ def _addplot_collections(panid,panels,apdict,xdates,config):
     for coll in collections:
         ax.add_collection(coll)
     if apdict['mav'] is not None:
-        apmavprices = _plot_mav(ax,config,xdates,c,apdict['mav'])
+        apmavprices = _plot_mav(ax, apdict['mav'],xdates,c,mavwidth,mavcolors)
     ax.autoscale_view()
     return ax
 
@@ -710,7 +716,7 @@ def _addplot_columns(panid,panels,ydata,apdict,xdates,config):
         raise ValueError('addplot type "'+str(aptype)+'" NOT yet supported.')
 
     if apdict['mav'] is not None:
-        apmavprices = _plot_mav(ax,config,xdates,ydata,apdict['mav'])
+        apmavprices = _plot_mav(ax, apdict['mav'],xdates,c,mavwidth,mavcolors)
 
     return ax
 
@@ -729,12 +735,8 @@ def _set_ylabels_side(ax_pri,ax_sec,primary_on_right):
         ax_sec.yaxis.set_label_position('right')
         ax_sec.yaxis.tick_right()
 
-def _plot_mav(ax,config,xdates,prices,apmav=None,apwidth=None):
+def _plot_mav(ax,mav,xdates,prices,mavwidths=None,mavcolors=None):
     style = config['style']
-    if apmav is not None:
-        mavgs = apmav
-    else:
-        mavgs = config['mav']
     mavp_list = []
     if mavgs is not None:
         if isinstance(mavgs,int):
